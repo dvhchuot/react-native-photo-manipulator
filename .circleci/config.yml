@@ -1,8 +1,11 @@
+# Orb support is from version >= 2.1
 version: 2.1
 
+# Make sure you use the latest version of the Orb!
 orbs:
   rn: react-native-community/react-native@1.2.1
 
+# Custom jobs which are not part of the Orb
 jobs:
   checkout_code:
     executor: rn/linux_js
@@ -11,40 +14,49 @@ jobs:
       - persist_to_workspace:
           root: .
           paths: .
-  analyse:
+  analyse_js:
     executor: rn/linux_js
     steps:
       - attach_workspace:
           at: .
       - rn/yarn_install
       - run:
-          name: Lint JS Code (ESLint)
-          command: yarn run lint
+          name: Run ESLint
+          command: yarn eslint
       - run:
           name: Jest
-          command: yarn run test
+          command: yarn jest
 
 workflows:
   test:
     jobs:
+      # Checkout the code and persist to the Workspace
+      # Note: This is a job which is defined above and not part of the Orb
       - checkout_code
-      - analyse:
+
+      # Analyze the Javascript using ESLint, Flow, and Jest
+      # Note: This is a job which is defined above and not part of the Orb
+      - analyse_js:
           requires:
             - checkout_code
+
+      # Build the Android app in debug mode
       - rn/android_build:
           name: build_android_debug
           project_path: "example/android"
           build_type: debug
           requires:
-            - analyse
+            - analyse_js
+
+      # Build and test the Android app in release mode
+      # Note: We split these into seperate jobs because we can build the Android app on a Linux machine and preserve the expensive MacOS executor minutes for when it's required
       - rn/android_build:
           name: build_android_release
           project_path: "example/android"
           build_type: release
           requires:
-            - analyse
+            - analyse_js
       - rn/android_test:
           detox_configuration: "android.emu.release"
-          detox_loglevel: "trace"
           requires:
             - build_android_release
