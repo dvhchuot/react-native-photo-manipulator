@@ -23,6 +23,9 @@ jobs:
       - run:
           name: Jest
           command: yarn run test
+      - run:
+          name: Install Yarn for Example
+          command: cd example && yarn install && cd ..
 
 workflows:
   test:
